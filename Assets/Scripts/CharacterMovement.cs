@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -27,14 +27,17 @@ public class CharacterMovement : MonoBehaviour
     [Header("GroundCheck")]
     public float playerHeight;
     public LayerMask whatIsGround;
-    bool grounded;
+    public bool grounded;
 
     [Header("Keybinds")]
     public KeyCode jumpKey = KeyCode.Space;
+    public KeyCode runKey = KeyCode.LeftShift;
 
     public Animator animator;
     public float attackCooldown;
 
+    public bool moving;
+    public bool running;
 
     // Start is called before the first frame update
     void Start()
@@ -68,26 +71,43 @@ public class CharacterMovement : MonoBehaviour
 
             Invoke(nameof(ResetAttack), attackCooldown);
         }
+
+        running = Input.GetKey(runKey) && grounded;
     }
 
     private void MovePlayer()
     {
         moveDirection = orientation.forward * verticalInput + orientation.right * horizontalInput;
 
+        moving = moveDirection != Vector3.zero;
+
+        animator.SetBool("Walking", moving);
+        animator.SetBool("Running", running);
+
         if (grounded)
         {
-            rb.AddForce(moveDirection.normalized * movementSpeed * 10f, ForceMode.Force);
+            if (running)
+            {
+                rb.AddForce(20f * movementSpeed * moveDirection.normalized, ForceMode.Force);
+            }
+            else
+            {
+                rb.AddForce(10f * movementSpeed * moveDirection.normalized, ForceMode.Force);
+            }
         }
         else
         {
-            rb.AddForce(moveDirection.normalized * movementSpeed * 10f * airMultiplier, ForceMode.Force);
+            rb.AddForce(10f * airMultiplier * movementSpeed * moveDirection.normalized, ForceMode.Force);
         }
     }
 
     // Update is called once per frame
     void Update()
     {
-        grounded = Physics.Raycast(transform.position, Vector3.down, playerHeight * 0.5f + 0.2f, whatIsGround);
+        grounded = Physics.Raycast(transform.position + new Vector3(0, 0.2f, 0), Vector3.down, playerHeight * 0.5f + 0.2f, whatIsGround);
+
+        animator.SetBool("Grounded", grounded);
+        animator.SetBool("Jumping", false);
 
         MyInput();
         SpeedControl();
@@ -121,6 +141,8 @@ public class CharacterMovement : MonoBehaviour
 
     private void Jump()
     {
+        animator.SetBool("Jumping", true);
+
         rb.velocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
 
         rb.AddForce(transform.up * jumpForce, ForceMode.Impulse);

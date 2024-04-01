@@ -5,7 +5,6 @@ using UnityEngine;
 public class CameraMovement : MonoBehaviour
 {
     [Header("References")]
-    public Animator animator;
     public Transform orientation;
     public Transform player;
     public Rigidbody rb;
@@ -13,7 +12,6 @@ public class CameraMovement : MonoBehaviour
     public float rotationSpeed;
 
     Vector3 inputDir;
-    public bool moving;
 
     private void Start()
     {
@@ -34,14 +32,11 @@ public class CameraMovement : MonoBehaviour
 
     private void FixedUpdate()
     {
-        moving = false;
 
         if (inputDir != Vector3.zero)
         {
-            moving = true;
             player.forward = Vector3.Slerp(player.forward, inputDir.normalized, Time.fixedDeltaTime * rotationSpeed);
         }
 
-        animator.SetBool("Walking", moving);
     }
 }
