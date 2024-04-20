@@ -7,7 +7,6 @@ public class CameraMovement : MonoBehaviour
     [Header("References")]
     public Transform orientation;
     public Transform player;
-    public Rigidbody rb;
 
     public float rotationSpeed;
 
