@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using static UnityEditor.Timeline.TimelinePlaybackControls;
 
 public class MovementController : MonoBehaviour
 {
@@ -28,7 +27,7 @@ public class MovementController : MonoBehaviour
 
     private Animator animator;
 
-    private float groundedGravity = -.05f;
+    private float groundedGravity = -.1f;
     private float gravity = -9.8f;
 
     private float prevY;
@@ -38,10 +37,13 @@ public class MovementController : MonoBehaviour
     private float initialJumpVelocity;
     [SerializeField] private float maxJumpHeight = 1.0f;
     [SerializeField] private float maxJumpTime = 0.5f;
+    [SerializeField] private float jumpCooldown = 0.1f;
 
     private bool isAttackPressed = false;
     private bool readytoAttack = true;
     public float attackCooldown;
+
+    [SerializeField] private MenuControl menuWindow;
 
     private void Awake()
     {
@@ -64,8 +66,24 @@ public class MovementController : MonoBehaviour
         inputActions.CharacterControls.Jump.canceled += OnJump;
         inputActions.CharacterControls.Attack.started += OnAttack;
         inputActions.CharacterControls.Attack.canceled += OnAttack;
+        inputActions.CharacterControls.Menu.performed += OnPause;
 
         SetupJumpVariables();
+    }
+
+    private void OnPause(InputAction.CallbackContext context)
+    {
+        menuWindow.gameObject.SetActive(true);
+        inputActions.Disable();
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+    }
+
+    private void UnPause(object sender, EventArgs e)
+    {
+        inputActions.Enable();
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
     }
 
     private void OnAttack(InputAction.CallbackContext context)
@@ -101,7 +119,7 @@ public class MovementController : MonoBehaviour
     {
         bool isWalking = animator.GetBool(isWalkingHash);
         bool isRunning = animator.GetBool(isRunningHash);
-        bool isJumping = animator.GetBool(isJumpingHash);
+        bool isJumpingAnimating = animator.GetBool(isJumpingHash);
         bool isGrounded = animator.GetBool(isGroundedHash);
         bool isAttacking = animator.GetBool(isAttackingHash);
 
@@ -111,8 +129,7 @@ public class MovementController : MonoBehaviour
         if (isRunPressed && !isRunning) animator.SetBool(isRunningHash, true);
         else if (!isRunPressed && isRunning) animator.SetBool(isRunningHash, false);
 
-        if (isJumpPressed && !isJumping) animator.SetBool(isJumpingHash, true);
-        else if (!isJumpPressed && isJumping) animator.SetBool(isJumpingHash, false);
+        //if (isJumpingAnimating) animator.SetBool(isJumpingHash, false);
 
         if (prevIsGrounded && !isGrounded) animator.SetBool(isGroundedHash, true);
         else if (!prevIsGrounded && isGrounded) animator.SetBool(isGroundedHash, false);
@@ -133,9 +150,10 @@ public class MovementController : MonoBehaviour
 
     private void HandleGravity()
     {
-        bool isFalling = currentMovement.y <= 0;
+        //bool isFalling = currentMovement.y <= 0;
         if(characterController.isGrounded)
         {
+            //animator.SetBool(isJumpingHash, false);
             currentMovement.y = groundedGravity;
             currentRunMovement.y = groundedGravity;
         }
@@ -154,6 +172,8 @@ public class MovementController : MonoBehaviour
         if (!isJumping && prevIsGrounded && isJumpPressed)
         {
             isJumping = true;
+            animator.SetBool(isJumpingHash, true);
+            Invoke(nameof(StopJumpAnitmation), jumpCooldown);
             currentMovement.y = initialJumpVelocity * 0.5f;
             currentRunMovement.y = initialJumpVelocity * 0.5f;
         }
@@ -161,6 +181,11 @@ public class MovementController : MonoBehaviour
         {
             isJumping = false;
         }
+    }
+
+    private void StopJumpAnitmation()
+    {
+        animator.SetBool("Jumping", false);
     }
 
     // Update is called once per frame
@@ -189,10 +214,12 @@ public class MovementController : MonoBehaviour
     private void OnEnable()
     {
         inputActions.Enable();
+        menuWindow.unpause += UnPause;
     }
 
     private void OnDisable()
     {
         inputActions.Disable();
+        menuWindow.unpause -= UnPause;
     }
 }
